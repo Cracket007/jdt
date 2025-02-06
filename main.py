@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 import pandas as pd
 import signal
 import sys
+import time
+import requests
+import urllib3
+from requests.exceptions import RequestException
+from urllib3.exceptions import HTTPError
 
 # Загружаем токен из .env
 load_dotenv(dotenv_path='.env', override=True)
@@ -140,8 +145,8 @@ def process_jdt(output_file):
         provider_number = CREDIT_MAPPING.get(row['Payment Provider'], row['Payment Provider'])
         
         credit_row = {
-            'ParentKey': len(df) + index + 1,
-            'JdtNum': index + 1,
+            'ParentKey': index + 1,  # Начинаем нумерацию заново с 1
+            'JdtNum': index + 1,     # Оставляем как есть
             'LineNum': '1',
             'Debit': '',
             'Credit': row['Fval EUR'],
@@ -208,10 +213,51 @@ def process_ojdt(output_file):
     # Сохраняем результат
     final_df.to_csv(output_file, index=False)
 
+def check_internet():
+    try:
+        # Пробуем подключиться к надежному сервису
+        requests.get("https://api.telegram.org", timeout=5)
+        return True
+    except (RequestException, HTTPError):
+        return False
+
+def run_bot():
+    while True:
+        try:
+            if not check_internet():
+                print("Нет подключения к интернету. Ожидание подключения...")
+                while not check_internet():
+                    time.sleep(10)  # Проверяем каждые 10 секунд
+                print("Подключение восстановлено!")
+
+            print("Бот запущен (для завершения нажмите Ctrl+C)")
+            bot.polling(none_stop=True, timeout=60, interval=3)
+            
+        except telebot.apihelper.ApiException as e:
+            print(f"Ошибка API Telegram: {str(e)}")
+            time.sleep(5)
+            continue
+            
+        except (requests.exceptions.ReadTimeout,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.ConnectTimeout) as e:
+            print(f"Ошибка сети: {str(e)}")
+            print("Ожидание восстановления соединения...")
+            time.sleep(10)
+            continue
+            
+        except Exception as e:
+            print(f"Неизвестная ошибка: {str(e)}")
+            print("Перезапуск бота через 5 секунд...")
+            time.sleep(5)
+            continue
+
 if __name__ == "__main__":
+    # Импортируем time для задержки перед перезапуском
+    import time
+    
     # Устанавливаем обработчик Ctrl+C
     signal.signal(signal.SIGINT, signal_handler)
     
-    print("Бот запущен (для завершения нажмите Ctrl+C)")
-    # Запускаем бота
-    bot.polling(none_stop=True)
+    # Запускаем бота в бесконечном цикле
+    run_bot()
