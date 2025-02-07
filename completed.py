@@ -17,6 +17,20 @@ DEBIT_MAPPING = {
     'wire_transfer': '210001'
 }
 
+def format_date(date_str):
+    """
+    Преобразует дату в формат yyyymmdd
+    """
+    try:
+        # Для формата dd/mm/yyyy HH:MM:SS
+        return pd.to_datetime(date_str, format='%d/%m/%Y %H:%M:%S').strftime('%Y%m%d')
+    except:
+        try:
+            # Для других форматов с явным указанием dayfirst=True
+            return pd.to_datetime(date_str, dayfirst=True).strftime('%Y%m%d')
+        except:
+            return date_str
+
 def process_jdt(output_file):
     """
     Обрабатывает completed файл и создает JDT отчет с группами строк:
@@ -41,6 +55,9 @@ def process_jdt(output_file):
     
     # Обрабатываем каждую транзакцию
     for index, row in df.iterrows():
+        # Форматируем дату
+        formatted_date = format_date(row['Completed'])
+        
         # Дебетовая запись - используем Payment Provider
         debit_row = {
             'ParentKey': index + 1,
@@ -48,11 +65,11 @@ def process_jdt(output_file):
             'LineNum': '',
             'Debit': row['Total Fee EUR'],
             'Credit': '',
-            'DueDate': row['Completed'],
+            'DueDate': formatted_date,
             'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
             'Reference1': row['Name'],
             'Reference2': row['Order'],
-            'TaxDate': row['Completed']
+            'TaxDate': formatted_date
         }
         debit_rows.append(debit_row)
         
@@ -63,11 +80,11 @@ def process_jdt(output_file):
             'LineNum': '1',
             'Debit': '',
             'Credit': row['Reseller\nFee EUR'],
-            'DueDate': row['Completed'],
+            'DueDate': formatted_date,
             'ShortName': '207001',
             'Reference1': row['Name'],
             'Reference2': row['Order'],
-            'TaxDate': row['Completed']
+            'TaxDate': formatted_date
         }
         reseller_rows.append(reseller_row)
         
@@ -80,11 +97,11 @@ def process_jdt(output_file):
             'LineNum': '2',
             'Debit': '',
             'Credit': row['Net\nFee EUR'],
-            'DueDate': row['Completed'],
+            'DueDate': formatted_date,
             'ShortName': short_name,  # Используем определенное значение
             'Reference1': row['Name'],
             'Reference2': row['Order'],
-            'TaxDate': row['Completed']
+            'TaxDate': formatted_date
         }
         net_fee_rows.append(net_fee_row)
     
@@ -94,6 +111,7 @@ def process_jdt(output_file):
     # Additional Fee
     for index, row in df.iterrows():
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
+            formatted_date = format_date(row['Completed'])
             max_key += 1
             # Additional Fee дебет - используем DEBIT_MAPPING по значению из Payment Provider
             add_fee_debit = {
@@ -102,11 +120,11 @@ def process_jdt(output_file):
                 'LineNum': '',
                 'Debit': row['Additionall Fee'],
                 'Credit': '',
-                'DueDate': row['Completed'],
+                'DueDate': formatted_date,
                 'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
-                'TaxDate': row['Completed']
+                'TaxDate': formatted_date
             }
             additional_fee_debit_rows.append(add_fee_debit)
             
@@ -117,11 +135,11 @@ def process_jdt(output_file):
                 'LineNum': '1',
                 'Debit': '',
                 'Credit': row['Additionall Fee'],
-                'DueDate': row['Completed'],
+                'DueDate': formatted_date,
                 'ShortName': '420003',  # Фиксированное значение для Additional Fee кредит
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
-                'TaxDate': row['Completed']
+                'TaxDate': formatted_date
             }
             additional_fee_credit_rows.append(add_fee_credit)
     
@@ -156,35 +174,23 @@ def process_ojdt(output_file):
     # Читаем шаблон completed
     template_df = pd.read_csv('templates/ojdt_completed.csv', nrows=1)
     
-    print(f"Количество колонок в completed ojdt: {len(template_df.columns)}")
-    
     # Создаем список для строк результата
     result_rows = []
     
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
+        formatted_date = format_date(row['Completed'])
+        
         # Основная запись
         ojdt_row = {
             'JdtNum': index + 1,
-            'ReferenceDate': row['Completed'],
+            'ReferenceDate': formatted_date,
             'Reference': row['Name'],
             'Reference2': row['Order'],
-            'TaxDate': row['Completed'],
-            'DueDate': row['Completed']
+            'TaxDate': formatted_date,
+            'DueDate': formatted_date
         }
         result_rows.append(ojdt_row)
-        
-        # Если есть Additional Fee, создаем дополнительную запись
-        if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
-            additional_row = {
-                'JdtNum': index + 2,
-                'ReferenceDate': row['Completed'],
-                'Reference': row['Name'],
-                'Reference2': row['Order'],
-                'TaxDate': row['Completed'],
-                'DueDate': row['Completed']
-            }
-            result_rows.append(additional_row)
     
     # Создаем DataFrame с данными
     data_df = pd.DataFrame(result_rows, columns=template_df.columns)

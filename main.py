@@ -21,6 +21,9 @@ from completed import process_ojdt as process_completed_ojdt
 load_dotenv(dotenv_path='.env', override=True)
 TOKEN = os.getenv("BOT_TOKEN")
 
+# В начале файла добавим константу
+ADMIN_ID = 455284316
+
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
 
@@ -63,18 +66,20 @@ def handle_file(message):
         # Формируем сообщение о процессе обработки
         report_type_msg = "COMPLETED" if report_type == 'completed' else "PAYD"
         process_msg = (
-            f"📥 Получен файл типа: {report_type_msg}\n"
-            f"⚙️ Формирую JDT и OJDT отчеты для {report_type_msg}...\n"
-            f"📤 Отправляю готовые отчеты..."
+            f"📥 Получен файл типа: {report_type_msg}\n\n"
+            f"⚙️ Формирую jdt и ojdt отчеты для {report_type_msg}..."
         )
         bot.send_message(message.chat.id, process_msg)
-        
-        print(f"\n{'='*50}")
-        print(f"Получен файл: {message.document.file_name}")
-        print(f"Тип отчета: {report_type.upper()}")
-        print(f"Количество строк: {len(df)}")
-        print(f"{'='*50}\n")
-        
+
+        # Оповещаем админа
+        admin_msg = (
+            f"🔔 Новый запрос на формирование отчета\n\n"
+            f"Тип: {report_type_msg}\n"
+            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"ID пользователя: {message.from_user.id}"
+        )
+        bot.send_message(ADMIN_ID, admin_msg)
+
         # Определяем имя входного файла
         input_file = "temp/исходник (Completed).csv" if report_type == 'completed' else "temp/исходник (Payd).csv"
         
@@ -107,9 +112,22 @@ def handle_file(message):
                 else:
                     raise  # Если все попытки исчерпаны, пробрасываем ошибку дальше
 
+        # После успешной отправки отчетов оповещаем админа об успешном завершении
+        success_msg = (
+            f"✅ Отчет успешно сформирован и отправлен\n\n"
+            f"Тип: {report_type_msg}\n"
+            f"Для пользователя: {message.from_user.username or 'Неизвестный пользователь'}"
+        )
+        bot.send_message(ADMIN_ID, success_msg)
+
     except Exception as e:
+        error_msg = (
+            f"❌ Ошибка при формировании отчета\n\n"
+            f"Пользователь: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"Ошибка: {str(e)}"
+        )
+        bot.send_message(ADMIN_ID, error_msg)
         bot.reply_to(message, f"Ошибка: {str(e)}")
-        print(f"Ошибка обработки файла: {str(e)}")
 
     finally:
         # Очищаем временные файлы
@@ -125,20 +143,39 @@ def handle_file(message):
             if os.path.exists(file):
                 os.remove(file)
 
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    """
+    Обработчик текстовых сообщений - пересылает их админу
+    """
+    try:
+        # Формируем сообщение для админа
+        forward_msg = (
+            f"📩 Новое сообщение\n\n"
+            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"ID: {message.from_user.id}\n"
+            f"Текст: {message.text}"
+        )
+        
+        # Отправляем админу
+        bot.send_message(ADMIN_ID, forward_msg)
+        
+    except Exception as e:
+        error_msg = (
+            f"❌ Ошибка при пересылке сообщения\n\n"
+            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"Ошибка: {str(e)}"
+        )
+        bot.send_message(ADMIN_ID, error_msg)
+
 def determine_report_type(df):
     """
-    Определяет тип отчета на основе наличия характерных колонок
+    Определяет тип отчета и проверяет валидность файла
     """
-    # Выводим список колонок для отладки
-    print("\nКолонки входного файла:")
-    for col in df.columns:
-        print(f"- {col}")
-    print()
-    
     # Очищаем названия колонок от лишних пробелов
     df.columns = df.columns.str.strip()
     
-    # Проверяем наличие колонки 'Reseller Fee EUR' с учетом возможных вариантов написания
+    # Проверяем наличие колонки 'Reseller Fee EUR' или её вариантов
     reseller_fee_variants = [
         'Reseller Fee EUR',
         'Reseller\nFee EUR',
@@ -147,15 +184,33 @@ def determine_report_type(df):
         'Reseller\nFee\nEUR'
     ]
     
-    # Проверяем наличие хотя бы одного варианта колонки
-    has_reseller_fee = any(col in df.columns for col in reseller_fee_variants)
-    
-    if has_reseller_fee:
-        print("Определен тип отчета: completed")
+    # Если есть хотя бы один вариант Reseller Fee - это completed
+    if any(col in df.columns for col in reseller_fee_variants):
         return 'completed'
-    else:
-        print("Определен тип отчета: payd")
+    
+    # Если нет Reseller Fee - проверяем на payd
+    if 'Paid' in df.columns:
         return 'payd'
+    
+    # Если не подходит ни один формат
+    raise ValueError(
+        "Неверный формат файла!\n\n"
+        "Файл должен содержать следующие колонки:\n"
+        "Для COMPLETED:\n"
+        "- Completed\n"
+        "- Payment Provider\n"
+        "- Total Fee EUR\n"
+        "- Reseller Fee EUR\n"
+        "- Net Fee EUR\n"
+        "- Name\n"
+        "- Order\n\n"
+        "Для PAYD:\n"
+        "- Paid\n"
+        "- Payment Method\n"
+        "- Total Fee EUR\n"
+        "- Name\n"
+        "- Order"
+    )
 
 def check_internet():
     try:

@@ -33,54 +33,69 @@ CREDIT_MAPPING = {
     'wire_transfer': '210001'
 }
 
+def format_date(date_str):
+    """
+    Преобразует дату в формат yyyymmdd
+    """
+    try:
+        # Для формата dd/mm/yyyy
+        return pd.to_datetime(date_str, format='%d/%m/%Y').strftime('%Y%m%d')
+    except:
+        try:
+            # Для других форматов с явным указанием dayfirst=True
+            return pd.to_datetime(date_str, dayfirst=True).strftime('%Y%m%d')
+        except:
+            return date_str
+
 def process_jdt(output_file):
+    """
+    Обрабатывает payd файл и создает JDT отчет
+    """
     # Читаем исходный файл
     df = pd.read_csv('temp/исходник (Payd).csv')
+    
+    # Очищаем названия колонок от лишних пробелов
+    df.columns = df.columns.str.strip()
     
     # Читаем шаблон и сохраняем только первую строку
     template_df = pd.read_csv('templates/jdt_template.csv', nrows=1)
     
-    print(f"Количество колонок в jdt: {len(template_df.columns)}")
-    
     # Создаем пустой список для строк результата
-    debit_rows = []  # Отдельный список для debit строк
-    credit_rows = [] # Отдельный список для credit строк
+    debit_rows = []
+    credit_rows = []
     
     # Создаем debit строки с их нумерацией
     for index, row in df.iterrows():
-        provider_number = DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider'])
+        # Форматируем дату
+        formatted_date = format_date(row['Paid'])
         
+        # Дебетовая запись
         debit_row = {
             'ParentKey': index + 1,
             'JdtNum': index + 1,
             'LineNum': '',
-            'Debit': row['Fval EUR'],
+            'Debit': row['Total Fee EUR'],
             'Credit': '',
-            'DueDate': row['Paid'],
-            'ShortName': provider_number,
+            'DueDate': formatted_date,
+            'ShortName': DEBIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
             'Reference1': row['Name'],
-            'Reference2': row['Order '],
-            'TaxDate': row['Paid'],
-            'ReferenceDate1': row['Paid']
+            'Reference2': row['Order'],
+            'TaxDate': formatted_date
         }
         debit_rows.append(debit_row)
-    
-    # Создаем credit строки
-    for index, row in df.iterrows():
-        provider_number = CREDIT_MAPPING.get(row['Payment Provider'], row['Payment Provider'])
         
+        # Кредитовая запись
         credit_row = {
             'ParentKey': index + 1,
             'JdtNum': index + 1,
             'LineNum': '1',
             'Debit': '',
-            'Credit': row['Fval EUR'],
-            'DueDate': row['Paid'],
-            'ShortName': provider_number,
+            'Credit': row['Total Fee EUR'],
+            'DueDate': formatted_date,
+            'ShortName': CREDIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
             'Reference1': row['Name'],
-            'Reference2': row['Order '],
-            'TaxDate': row['Paid'],
-            'ReferenceDate1': row['Paid']
+            'Reference2': row['Order'],
+            'TaxDate': formatted_date
         }
         credit_rows.append(credit_row)
     
@@ -105,26 +120,32 @@ def process_jdt(output_file):
     final_df.to_csv(output_file, index=False)
 
 def process_ojdt(output_file):
+    """
+    Обработка OJDT для payd отчета
+    """
     # Читаем исходный файл
     df = pd.read_csv('temp/исходник (Payd).csv')
     
+    # Очищаем названия колонок от лишних пробелов
+    df.columns = df.columns.str.strip()
+    
     # Читаем шаблон и сохраняем только первую строку
     template_df = pd.read_csv('templates/ojdt_template.csv', nrows=1)
-    
-    print(f"Количество колонок в ojdt: {len(template_df.columns)}")
     
     # Создаем список для строк результата
     result_rows = []
     
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
+        formatted_date = format_date(row['Paid'])
+        
         ojdt_row = {
             'JdtNum': index + 1,
-            'ReferenceDate': row['Paid'],
+            'ReferenceDate': formatted_date,
             'Reference': row['Name'],
-            'Reference2': row['Order '],
-            'TaxDate': row['Paid'],
-            'DueDate': row['Paid']
+            'Reference2': row['Order'],
+            'TaxDate': formatted_date,
+            'DueDate': formatted_date
         }
         result_rows.append(ojdt_row)
     
