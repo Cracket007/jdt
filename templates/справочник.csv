@@ -1,0 +1,27 @@
+Payment Provider (S),Debit
+astropay,210009
+Eupago,210011
+Fibo PNC,210002
+Intergiro,210012
+Paysafe,210007
+PNC,210002
+PNC VISA,210002
+RPD,210013
+TRU,210006
+Truevo PayOn,210008
+volt,210005
+voltx,210005
+wire_transfer,210001
+,
+,
+Reseller Fee EUR (AW),Credit
+,207001
+,
+,
+Payment Method (K),Credit  (Net Fee EUR (AX)
+CC / APM,420002
+wire_transfer,420001
+,
+,
+Additionall Fee (AS),Credit
+,420003

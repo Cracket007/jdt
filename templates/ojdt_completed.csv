@@ -1,0 +1,4 @@
+JdtNum,ReferenceDate,Memo,Reference,Reference2,TransactionCode,ProjectCode,TaxDate,Indicator,UseAutoStorno,StornoDate,VatDate,Series,StampTax,DueDate,AutoVAT,ReportEU,Report347,LocationCode,BlockDunningLetter,AutomaticWT,Corisptivi,Reference3,DocumentType,DeferredTax,OperationCode,ResidenceNumberType,ECDPostingType,ExposedTransNumber,IsCostCenterTransfer,ReportingSectionControlStatementVAT,ExcludeFromTaxReportControlStatementVAT,SAPPassport,Cig,Cup,AdjustTransaction,AttachmentEntry
+JDT_NUM,RefDate,Memo,Ref1,Ref2,TransCode,Project,TaxDate,Indicator,AutoStorno,StornoDate,VatDate,Series,StampTax,DueDate,AutoVAT,ReportEU,Report347,Location,BlockDunn,AutoWT,Corisptivi,Ref3,DocType,DeferedTax,OperatCode,ResidenNum,ECDPosTyp,ExTransId,PTICode,Letter,FolNumFrom,FolNumTo,IsCoEntry,RepSection,ExclTaxRep,SAPPassprt
+1,Completed (AE),,Name (D),Order (A),,,(D) Reference,,,,,,,(D) Reference,,,,,,,,,,,,,,,,,,,,,,
+2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
