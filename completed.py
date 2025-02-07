@@ -2,22 +2,6 @@ import pandas as pd
 
 # Словари для маппинга провайдеров на их номера (могут отличаться от payd)
 DEBIT_MAPPING = {
-    'astropay': '141009',
-    'Eupago': '141011',
-    'Fibo PNC': '141002',
-    'Intergiro': '141012',
-    'Paysafe': '141007',
-    'PNC': '141002',
-    'PNC VISA': '141002',
-    'RPD': '141013',
-    'TRU': '141006',
-    'Truevo PayOn': '141006',
-    'volt': '141005',
-    'voltx': '141005',
-    'wire_transfer': '141001'
-}
-
-CREDIT_MAPPING = {
     'astropay': '210009',
     'Eupago': '210011',
     'Fibo PNC': '210002',
@@ -27,7 +11,7 @@ CREDIT_MAPPING = {
     'PNC VISA': '210002',
     'RPD': '210013',
     'TRU': '210006',
-    'Truevo PayOn': '210006',
+    'Truevo PayOn': '210008',
     'volt': '210005',
     'voltx': '210005',
     'wire_transfer': '210001'
@@ -57,7 +41,7 @@ def process_jdt(output_file):
     
     # Обрабатываем каждую транзакцию
     for index, row in df.iterrows():
-        # Основные строки без изменений
+        # Дебетовая запись - используем Payment Provider
         debit_row = {
             'ParentKey': index + 1,
             'JdtNum': index + 1,
@@ -65,13 +49,14 @@ def process_jdt(output_file):
             'Debit': row['Total Fee EUR'],
             'Credit': '',
             'DueDate': row['Completed'],
-            'ShortName': row['Payment Provider'],
+            'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': row['Completed']
         }
         debit_rows.append(debit_row)
         
+        # Reseller Fee - фиксированное значение
         reseller_row = {
             'ParentKey': index + 1,
             'JdtNum': index + 1,
@@ -79,12 +64,15 @@ def process_jdt(output_file):
             'Debit': '',
             'Credit': row['Reseller\nFee EUR'],
             'DueDate': row['Completed'],
-            'ShortName': CREDIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+            'ShortName': '207001',
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': row['Completed']
         }
         reseller_rows.append(reseller_row)
+        
+        # Net Fee - определяем ShortName в зависимости от провайдера
+        short_name = '420001' if row['Payment Provider'] == 'wire_transfer' else '420002'
         
         net_fee_row = {
             'ParentKey': index + 1,
@@ -93,7 +81,7 @@ def process_jdt(output_file):
             'Debit': '',
             'Credit': row['Net\nFee EUR'],
             'DueDate': row['Completed'],
-            'ShortName': CREDIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+            'ShortName': short_name,  # Используем определенное значение
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': row['Completed']
@@ -103,34 +91,34 @@ def process_jdt(output_file):
     # Находим максимальный ParentKey из основных записей
     max_key = len(df)  # Просто количество транзакций
     
-    # Добавляем Additional Fee с продолжением нумерации
+    # Additional Fee
     for index, row in df.iterrows():
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
             max_key += 1
-            # Дебет Additional Fee
+            # Additional Fee дебет - используем DEBIT_MAPPING по значению из Payment Provider
             add_fee_debit = {
                 'ParentKey': max_key,
                 'JdtNum': max_key,
-                'LineNum': '',  # Пустой для дебета
+                'LineNum': '',
                 'Debit': row['Additionall Fee'],
                 'Credit': '',
                 'DueDate': row['Completed'],
-                'ShortName': row['Payment Provider'],
+                'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': row['Completed']
             }
             additional_fee_debit_rows.append(add_fee_debit)
             
-            # Кредит Additional Fee
+            # Additional Fee кредит - фиксированное значение 420003
             add_fee_credit = {
                 'ParentKey': max_key,
                 'JdtNum': max_key,
-                'LineNum': '1',  # 1 для кредита
+                'LineNum': '1',
                 'Debit': '',
-                'Credit': row['Additionall Fee'],  # То же значение в кредит
+                'Credit': row['Additionall Fee'],
                 'DueDate': row['Completed'],
-                'ShortName': row['Payment Provider'],
+                'ShortName': '420003',  # Фиксированное значение для Additional Fee кредит
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': row['Completed']
