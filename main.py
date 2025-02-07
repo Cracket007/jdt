@@ -219,7 +219,59 @@ def check_internet():
     except (RequestException, HTTPError):
         return False
 
+def register_commands():
+    """
+    Регистрирует команды бота
+    """
+    commands = [
+        telebot.types.BotCommand("start", "Запустить бота и получить инструкции"),
+        telebot.types.BotCommand("help", "Показать справку по использованию"),
+        telebot.types.BotCommand("format", "Информация о формате файлов")
+    ]
+    
+    try:
+        bot.delete_my_commands()  # Удаляем старые команды
+        bot.set_my_commands(commands)  # Устанавливаем новые
+    except Exception as e:
+        print(f"Ошибка при регистрации команд: {e}")
+
+# Добавим обработчики для новых команд
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    help_text = (
+        "🤖 *Как пользоваться ботом:*\n\n"
+        "1. Отправьте CSV файл с отчетом\n"
+        "2. Бот автоматически определит тип файла (PAYD или COMPLETED)\n"
+        "3. Создаст и отправит вам JDT и OJDT отчеты\n\n"
+        "По всем вопросам обращайтесь к администратору"
+    )
+    bot.reply_to(message, help_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['format'])
+def format_command(message):
+    format_text = (
+        "📋 *Требования к формату файла:*\n\n"
+        "*COMPLETED файл должен содержать колонки:*\n"
+        "- Completed\n"
+        "- Payment Provider\n"
+        "- Total Fee EUR\n"
+        "- Reseller Fee EUR\n"
+        "- Net Fee EUR\n"
+        "- Name\n"
+        "- Order\n\n"
+        "*PAYD файл должен содержать колонки:*\n"
+        "- Paid\n"
+        "- Payment Method\n"
+        "- Total Fee EUR\n"
+        "- Name\n"
+        "- Order"
+    )
+    bot.reply_to(message, format_text, parse_mode='Markdown')
+
 def run_bot():
+    # Регистрируем команды при запуске
+    register_commands()
+    
     while True:
         try:
             if not check_internet():
