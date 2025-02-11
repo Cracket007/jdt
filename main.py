@@ -6,7 +6,6 @@ import signal
 import sys
 import time
 import requests
-import urllib3
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 from http.client import RemoteDisconnected
@@ -34,10 +33,77 @@ def signal_handler(sig, frame):
         os.remove("temp/исходник (Payd).csv")
     sys.exit(0)
 
+# Сначала идут все обработчики команд
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.reply_to(message, "Привет! Я бот для обработки файлов. Отправьте мне файл, и я обработаю его для вас.")
 
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    help_text = (
+        "🤖 *Как пользоваться ботом:*\n\n"
+        "1. Отправьте CSV файл с отчетом\n"
+        "2. Бот автоматически определит тип файла (PAYD или COMPLETED)\n"
+        "3. Создаст и отправит вам JDT и OJDT отчеты\n\n"
+        "По всем вопросам обращайтесь к администратору"
+    )
+    bot.reply_to(message, help_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['format'])
+def format_command(message):
+    format_text = (
+        "📋 *Требования к формату файла:*\n\n"
+        "*COMPLETED файл должен содержать колонки:*\n"
+        "- Completed\n"
+        "- Payment Provider\n"
+        "- Total Fee EUR\n"
+        "- Reseller Fee EUR\n"
+        "- Net Fee EUR\n"
+        "- Name\n"
+        "- Order\n\n"
+        "*PAYD файл должен содержать колонки:*\n"
+        "- Paid\n"
+        "- Payment Method\n"
+        "- Total Fee EUR\n"
+        "- Name\n"
+        "- Order"
+    )
+    bot.reply_to(message, format_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['info'])
+def info_command(message):
+    info_text = (
+        "📊 <b>Структура проводок в SAP</b>\n\n"
+        "<b>PAYD файл (простые платежи):</b>\n"
+        "• Дебет = Кредит (Total Fee EUR)\n"
+        "• Счета дебета: 141xxx (поступление)\n"
+        "• Счета кредита: 210xxx (обязательства)\n\n"
+        
+        "<b>COMPLETED файл (с комиссиями):</b>\n"
+        "1. Основная проводка:\n"
+        "• Дебет: Total Fee EUR\n"
+        "• Кредит1: Reseller Fee EUR (комиссия)\n"
+        "• Кредит2: Net Fee EUR (чистая сумма)\n\n"
+        
+        "<b>Специальные счета:</b>\n"
+        "• 207001 - Reseller Fee\n"
+        "• 420001 - Net Fee (wire_transfer)\n"
+        "• 420002 - Net Fee (CC/APM)\n"
+        "• 420003 - Additional Fee\n\n"
+        
+        "<b>Пример COMPLETED:</b>\n"
+        "Транзакция 100 EUR:\n"
+        "• Дебет: 100 EUR (счет 210xxx)\n"
+        "• Кредит1: 30 EUR (счет 207001) - комиссия\n"
+        "• Кредит2: 70 EUR (счет 420xxx) - чистая сумма\n\n"
+        
+        "При наличии Additional Fee создается отдельная проводка:\n"
+        "• Дебет: сумма (счет по провайдеру)\n"
+        "• Кредит: сумма (счет 420003)"
+    )
+    bot.reply_to(message, info_text, parse_mode='HTML')
+
+# Затем идет обработчик файлов
 @bot.message_handler(content_types=['document'])
 def handle_file(message):
     input_file = None  # Инициализируем переменную
@@ -70,15 +136,6 @@ def handle_file(message):
             f"⚙️ Формирую jdt и ojdt отчеты для {report_type_msg}..."
         )
         bot.send_message(message.chat.id, process_msg)
-
-        # Оповещаем админа
-        admin_msg = (
-            f"🔔 Новый запрос на формирование отчета\n\n"
-            f"Тип: {report_type_msg}\n"
-            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
-            f"ID пользователя: {message.from_user.id}"
-        )
-        bot.send_message(ADMIN_ID, admin_msg)
 
         # Определяем имя входного файла
         input_file = "temp/исходник (Completed).csv" if report_type == 'completed' else "temp/исходник (Payd).csv"
@@ -116,14 +173,14 @@ def handle_file(message):
         success_msg = (
             f"✅ Отчет успешно сформирован и отправлен\n\n"
             f"Тип: {report_type_msg}\n"
-            f"Для пользователя: {message.from_user.username or 'Неизвестный пользователь'}"
+            f"Для пользователя: @{message.from_user.username}" or "Неизвестный пользователь"
         )
         bot.send_message(ADMIN_ID, success_msg)
 
     except Exception as e:
         error_msg = (
             f"❌ Ошибка при формировании отчета\n\n"
-            f"Пользователь: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"Пользователь: @{message.from_user.username} or 'Неизвестный пользователь'\n"
             f"Ошибка: {str(e)}"
         )
         bot.send_message(ADMIN_ID, error_msg)
@@ -143,27 +200,25 @@ def handle_file(message):
             if os.path.exists(file):
                 os.remove(file)
 
+# В конце идет обработчик текстовых сообщений
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
-    """
-    Обработчик текстовых сообщений - пересылает их админу
-    """
+    # Пропускаем команды
+    if message.text.startswith('/'):
+        return
+        
     try:
-        # Формируем сообщение для админа
         forward_msg = (
             f"📩 Новое сообщение\n\n"
-            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"От: @{message.from_user.username}" or "Неизвестный пользователь\n"
             f"ID: {message.from_user.id}\n"
             f"Текст: {message.text}"
         )
-        
-        # Отправляем админу
         bot.send_message(ADMIN_ID, forward_msg)
-        
     except Exception as e:
         error_msg = (
             f"❌ Ошибка при пересылке сообщения\n\n"
-            f"От: {message.from_user.username or 'Неизвестный пользователь'}\n"
+            f"От: @{message.from_user.username} or 'Неизвестный пользователь'\n"
             f"Ошибка: {str(e)}"
         )
         bot.send_message(ADMIN_ID, error_msg)
@@ -226,47 +281,15 @@ def register_commands():
     commands = [
         telebot.types.BotCommand("start", "Запустить бота и получить инструкции"),
         telebot.types.BotCommand("help", "Показать справку по использованию"),
-        telebot.types.BotCommand("format", "Информация о формате файлов")
+        telebot.types.BotCommand("format", "Информация о формате файлов"),
+        telebot.types.BotCommand("info", "Информация о структуре проводок")
     ]
     
     try:
-        bot.delete_my_commands()  # Удаляем старые команды
-        bot.set_my_commands(commands)  # Устанавливаем новые
+        bot.delete_my_commands()
+        bot.set_my_commands(commands)
     except Exception as e:
         print(f"Ошибка при регистрации команд: {e}")
-
-# Добавим обработчики для новых команд
-@bot.message_handler(commands=['help'])
-def help_command(message):
-    help_text = (
-        "🤖 *Как пользоваться ботом:*\n\n"
-        "1. Отправьте CSV файл с отчетом\n"
-        "2. Бот автоматически определит тип файла (PAYD или COMPLETED)\n"
-        "3. Создаст и отправит вам JDT и OJDT отчеты\n\n"
-        "По всем вопросам обращайтесь к администратору"
-    )
-    bot.reply_to(message, help_text, parse_mode='Markdown')
-
-@bot.message_handler(commands=['format'])
-def format_command(message):
-    format_text = (
-        "📋 *Требования к формату файла:*\n\n"
-        "*COMPLETED файл должен содержать колонки:*\n"
-        "- Completed\n"
-        "- Payment Provider\n"
-        "- Total Fee EUR\n"
-        "- Reseller Fee EUR\n"
-        "- Net Fee EUR\n"
-        "- Name\n"
-        "- Order\n\n"
-        "*PAYD файл должен содержать колонки:*\n"
-        "- Paid\n"
-        "- Payment Method\n"
-        "- Total Fee EUR\n"
-        "- Name\n"
-        "- Order"
-    )
-    bot.reply_to(message, format_text, parse_mode='Markdown')
 
 def run_bot():
     # Регистрируем команды при запуске
