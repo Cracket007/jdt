@@ -204,14 +204,9 @@ def handle_file(message):
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     # Пропускаем команды
-    if message.text.startswith('/'):
-        return
-        
     try:
         forward_msg = (
             f"📩 Новое сообщение\n\n"
-            f"От: @{message.from_user.username}" or "Неизвестный пользователь\n"
-            f"ID: {message.from_user.id}\n"
             f"Текст: {message.text}"
         )
         bot.send_message(ADMIN_ID, forward_msg)
