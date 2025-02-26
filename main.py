@@ -213,7 +213,7 @@ def handle_text(message):
     except Exception as e:
         error_msg = (
             f"❌ Ошибка при пересылке сообщения\n\n"
-            f"От: @{message.from_user.username} or 'Неизвестный пользователь'\n"
+            f"От: @{message.from_user.username}\n"
             f"Ошибка: {str(e)}"
         )
         bot.send_message(ADMIN_ID, error_msg)
