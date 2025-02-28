@@ -14,7 +14,8 @@ DEBIT_MAPPING = {
     'Truevo PayOn': '141008',
     'volt': '141005',
     'voltx': '141005',
-    'wire_transfer': '141001'
+    'wire_transfer': '141001',
+    'Unicorn': '141010'
 }
 
 CREDIT_MAPPING = {
@@ -30,7 +31,8 @@ CREDIT_MAPPING = {
     'Truevo PayOn': '210008',
     'volt': '210005',
     'voltx': '210005',
-    'wire_transfer': '210001'
+    'wire_transfer': '210001',
+    'unicorn': '210010'
 }
 
 def format_date(date_str):

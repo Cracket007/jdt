@@ -13,8 +13,10 @@ from http.client import RemoteDisconnected
 # Импортируем функции из наших модулей
 from payd import process_jdt as process_payd_jdt
 from payd import process_ojdt as process_payd_ojdt
+from payd import DEBIT_MAPPING, CREDIT_MAPPING
 from completed import process_jdt as process_completed_jdt
 from completed import process_ojdt as process_completed_ojdt
+from completed import DEBIT_MAPPING
 
 # Загружаем токен из .env
 load_dotenv(dotenv_path='.env', override=True)
@@ -72,14 +74,26 @@ def format_command(message):
 
 @bot.message_handler(commands=['info'])
 def info_command(message):
+    # Создаем строки для отображения мапингов PAYD
+    payd_debit_mappings = "\n".join([f"    - {k}: {v}" for k, v in DEBIT_MAPPING.items()])
+    payd_credit_mappings = "\n".join([f"    - {k}: {v}" for k, v in CREDIT_MAPPING.items()])
+    
+    # Создаем строки для отображения мапингов COMPLETED
+    completed_debit_mappings = "\n".join([f"    - {k}: {v}" for k, v in DEBIT_MAPPING.items()])
+
     info_text = (
         "📊 <b>Структура проводок в SAP</b>\n\n"
         "<b>PAYD файл (простые платежи):</b>\n"
         "• Дебет = Кредит (Total Fee EUR)\n"
-        "• Счета дебета: 141xxx (поступление)\n"
-        "• Счета кредита: 210xxx (обязательства)\n\n"
+        "• Счета дебета:\n"
+        f"{payd_debit_mappings}\n"
+        "• Счета кредита:\n"
+        f"{payd_credit_mappings}\n\n"
         
         "<b>COMPLETED файл (с комиссиями):</b>\n"
+        "• Счета дебета:\n"
+        f"{completed_debit_mappings}\n\n"
+        
         "1. Основная проводка:\n"
         "• Дебет: Total Fee EUR\n"
         "• Кредит1: Reseller Fee EUR (комиссия)\n"

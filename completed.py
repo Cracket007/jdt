@@ -14,13 +14,12 @@ DEBIT_MAPPING = {
     'Truevo PayOn': '210008',
     'volt': '210005',
     'voltx': '210005',
-    'wire_transfer': '210001'
+    'wire_transfer': '210001',
+    'Unicorn': '210010'
 }
 
 def format_date(date_str):
-    """
-    Преобразует дату в формат yyyymmdd
-    """
+    """ Преобразует дату в формат yyyymmdd"""
     try:
         # Для формата dd/mm/yyyy HH:MM:SS
         return pd.to_datetime(date_str, format='%d/%m/%Y %H:%M:%S').strftime('%Y%m%d')
