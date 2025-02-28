@@ -33,7 +33,7 @@ CREDIT_MAPPING = {
     'wire_transfer': '210001'
 }
 
-def format_date(date_str):
+async def format_date(date_str):
     """
     Преобразует дату в формат yyyymmdd
     """
@@ -47,28 +47,28 @@ def format_date(date_str):
         except:
             return date_str
 
-def process_jdt(output_file):
+async def process_jdt(input_file, output_file):
     """
     Обрабатывает payd файл и создает JDT отчет
     """
     # Читаем исходный файл
-    df = pd.read_csv('temp/исходник (Payd).csv')
-    
+    df = pd.read_csv(input_file)
+
     # Очищаем названия колонок от лишних пробелов
     df.columns = df.columns.str.strip()
-    
+
     # Читаем шаблон и сохраняем только первую строку
     template_df = pd.read_csv('templates/jdt_template.csv', nrows=1)
-    
+
     # Создаем пустой список для строк результата
     debit_rows = []
     credit_rows = []
-    
+
     # Создаем debit строки с их нумерацией
     for index, row in df.iterrows():
         # Форматируем дату
-        formatted_date = format_date(row['Paid'])
-        
+        formatted_date = await format_date(row['Paid'])
+
         # Дебетовая запись
         debit_row = {
             'ParentKey': index + 1,
@@ -83,7 +83,7 @@ def process_jdt(output_file):
             'TaxDate': formatted_date
         }
         debit_rows.append(debit_row)
-        
+
         # Кредитовая запись
         credit_row = {
             'ParentKey': index + 1,
@@ -98,47 +98,47 @@ def process_jdt(output_file):
             'TaxDate': formatted_date
         }
         credit_rows.append(credit_row)
-    
+
     # Объединяем списки
     result_rows = debit_rows + credit_rows
-    
+
     # Создаем DataFrame из результата
     result_df = pd.DataFrame(result_rows)
-    
+
     # Создаем пустой DataFrame с колонками из шаблона
     final_df = pd.DataFrame(columns=template_df.columns)
-    
+
     # Копируем данные
     for col in result_df.columns:
         if col in final_df.columns:
             final_df[col] = result_df[col]
-    
+
     # Объединяем заголовки и данные
     final_df = pd.concat([template_df, final_df], ignore_index=True)
-    
+
     # Сохраняем результат
     final_df.to_csv(output_file, index=False)
 
-def process_ojdt(output_file):
+async def process_ojdt(input_file, output_file):
     """
     Обработка OJDT для payd отчета
     """
     # Читаем исходный файл
-    df = pd.read_csv('temp/исходник (Payd).csv')
-    
+    df = pd.read_csv(input_file)
+
     # Очищаем названия колонок от лишних пробелов
     df.columns = df.columns.str.strip()
-    
+
     # Читаем шаблон и сохраняем только первую строку
     template_df = pd.read_csv('templates/ojdt_template.csv', nrows=1)
-    
+
     # Создаем список для строк результата
     result_rows = []
-    
+
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
-        formatted_date = format_date(row['Paid'])
-        
+        formatted_date = await format_date(row['Paid'])
+
         ojdt_row = {
             'JdtNum': index + 1,
             'ReferenceDate': formatted_date,
@@ -148,12 +148,12 @@ def process_ojdt(output_file):
             'DueDate': formatted_date
         }
         result_rows.append(ojdt_row)
-    
+
     # Создаем DataFrame с данными
     data_df = pd.DataFrame(result_rows, columns=template_df.columns)
-    
+
     # Объединяем заголовки и данные
     final_df = pd.concat([template_df, data_df], ignore_index=True)
-    
+
     # Сохраняем результат
-    final_df.to_csv(output_file, index=False) 
+    final_df.to_csv(output_file, index=False)

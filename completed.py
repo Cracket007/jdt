@@ -17,7 +17,7 @@ DEBIT_MAPPING = {
     'wire_transfer': '210001'
 }
 
-def format_date(date_str):
+async def format_date(date_str):
     """
     Преобразует дату в формат yyyymmdd
     """
@@ -31,7 +31,7 @@ def format_date(date_str):
         except:
             return date_str
 
-def process_jdt(output_file):
+async def process_jdt(output_file):
     """
     Обрабатывает completed файл и создает JDT отчет с группами строк:
     1. Все дебетовые записи
@@ -42,22 +42,22 @@ def process_jdt(output_file):
     """
     # Читаем входной файл
     df = pd.read_csv('temp/исходник (Completed).csv')
-    
+
     # Читаем шаблон
     template_df = pd.read_csv('templates/jdt_completed.csv', nrows=1)
-    
+
     # Создаем списки для строк
     debit_rows = []
     reseller_rows = []
     net_fee_rows = []
     additional_fee_debit_rows = []  # Дебет Additional Fee
     additional_fee_credit_rows = []  # Кредит Additional Fee
-    
+
     # Обрабатываем каждую транзакцию
     for index, row in df.iterrows():
         # Форматируем дату
-        formatted_date = format_date(row['Completed'])
-        
+        formatted_date = await format_date(row['Completed'])
+
         # Дебетовая запись - используем Payment Provider
         debit_row = {
             'ParentKey': index + 1,
@@ -72,7 +72,7 @@ def process_jdt(output_file):
             'TaxDate': formatted_date
         }
         debit_rows.append(debit_row)
-        
+
         # Reseller Fee - фиксированное значение
         reseller_row = {
             'ParentKey': index + 1,
@@ -87,10 +87,10 @@ def process_jdt(output_file):
             'TaxDate': formatted_date
         }
         reseller_rows.append(reseller_row)
-        
+
         # Net Fee - определяем ShortName в зависимости от провайдера
         short_name = '420001' if row['Payment Provider'] == 'wire_transfer' else '420002'
-        
+
         net_fee_row = {
             'ParentKey': index + 1,
             'JdtNum': index + 1,
@@ -104,14 +104,14 @@ def process_jdt(output_file):
             'TaxDate': formatted_date
         }
         net_fee_rows.append(net_fee_row)
-    
+
     # Находим максимальный ParentKey из основных записей
     max_key = len(df)  # Просто количество транзакций
-    
+
     # Additional Fee
     for index, row in df.iterrows():
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
-            formatted_date = format_date(row['Completed'])
+            formatted_date = await format_date(row['Completed'])
             max_key += 1
             # Additional Fee дебет - используем DEBIT_MAPPING по значению из Payment Provider
             add_fee_debit = {
@@ -127,7 +127,7 @@ def process_jdt(output_file):
                 'TaxDate': formatted_date
             }
             additional_fee_debit_rows.append(add_fee_debit)
-            
+
             # Additional Fee кредит - фиксированное значение 420003
             add_fee_credit = {
                 'ParentKey': max_key,
@@ -142,45 +142,45 @@ def process_jdt(output_file):
                 'TaxDate': formatted_date
             }
             additional_fee_credit_rows.append(add_fee_credit)
-    
+
     # Объединяем все строки в нужном порядке
-    result_rows = (debit_rows + reseller_rows + net_fee_rows + 
+    result_rows = (debit_rows + reseller_rows + net_fee_rows +
                   additional_fee_debit_rows + additional_fee_credit_rows)
-    
+
     # Создаем DataFrame из результата
     result_df = pd.DataFrame(result_rows)
-    
+
     # Создаем пустой DataFrame с колонками из шаблона
     final_df = pd.DataFrame(columns=template_df.columns)
-    
+
     # Копируем данные
     for col in result_df.columns:
         if col in final_df.columns:
             final_df[col] = result_df[col]
-    
+
     # Объединяем заголовки и данные
     final_df = pd.concat([template_df, final_df], ignore_index=True)
-    
+
     # Сохраняем результат
     final_df.to_csv(output_file, index=False)
 
-def process_ojdt(output_file):
+async def process_ojdt(output_file):
     """
     Обработка OJDT для completed отчета
     """
     # Читаем исходный файл
     df = pd.read_csv('temp/исходник (Completed).csv')
-    
+
     # Читаем шаблон completed
     template_df = pd.read_csv('templates/ojdt_completed.csv', nrows=1)
-    
+
     # Создаем список для строк результата
     result_rows = []
-    
+
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
-        formatted_date = format_date(row['Completed'])
-        
+        formatted_date = await format_date(row['Completed'])
+
         # Основная запись
         ojdt_row = {
             'JdtNum': index + 1,
@@ -191,12 +191,12 @@ def process_ojdt(output_file):
             'DueDate': formatted_date
         }
         result_rows.append(ojdt_row)
-    
+
     # Создаем DataFrame с данными
     data_df = pd.DataFrame(result_rows, columns=template_df.columns)
-    
+
     # Объединяем заголовки и данные
     final_df = pd.concat([template_df, data_df], ignore_index=True)
-    
+
     # Сохраняем результат
-    final_df.to_csv(output_file, index=False) 
+    final_df.to_csv(output_file, index=False)

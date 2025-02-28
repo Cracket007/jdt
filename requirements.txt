@@ -1,5 +1,0 @@
-pyTelegramBotAPI
-pandas
-python-dotenv
-requests
-urllib3 
