@@ -11,7 +11,7 @@ DEBIT_MAPPING = {
     'PNC VISA': '141002',
     'RPD': '141013',
     'TRU': '141006',
-    'Truevo PayOn': '141006',
+    'Truevo PayOn': '141008',
     'volt': '141005',
     'voltx': '141005',
     'wire_transfer': '141001'
@@ -27,7 +27,7 @@ CREDIT_MAPPING = {
     'PNC VISA': '210002',
     'RPD': '210013',
     'TRU': '210006',
-    'Truevo PayOn': '210006',
+    'Truevo PayOn': '210008',
     'volt': '210005',
     'voltx': '210005',
     'wire_transfer': '210001'
@@ -77,7 +77,7 @@ def process_jdt(output_file):
             'Debit': row['Total Fee EUR'],
             'Credit': '',
             'DueDate': formatted_date,
-            'ShortName': DEBIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+            'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': formatted_date
@@ -92,7 +92,7 @@ def process_jdt(output_file):
             'Debit': '',
             'Credit': row['Total Fee EUR'],
             'DueDate': formatted_date,
-            'ShortName': CREDIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+            'ShortName': CREDIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': formatted_date
