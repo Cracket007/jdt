@@ -1,21 +1,8 @@
 import pandas as pd
-import json
 import os
 import logging
+from config.mappings import DEBIT_MAPPING_PAYD, CREDIT_MAPPING_PEYD
 
-def load_mappings():
-    """Загружает маппинги из JSON файла."""
-    try:
-        with open('config/mappings.json', 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Ошибка при загрузке маппингов: {e}")
-        # Возвращаем пустые словари в случае ошибки
-        return {
-            "debit_mapping": {},
-            "credit_mapping": {},
-            "special_accounts": {}
-        }
 
 async def format_date(date_str):
     """Преобразует дату в формат yyyymmdd.
@@ -35,10 +22,6 @@ async def process_jdt(input_file, output_file):
     try:
         logging.info(f"Начинаем обработку JDT отчета из файла {input_file}")
 
-        # Загружаем маппинги
-        mappings = load_mappings()
-        DEBIT_MAPPING = mappings["debit_mapping"]
-        CREDIT_MAPPING = mappings["credit_mapping"]
 
         # Читаем исходный файл
         df = pd.read_csv(input_file)
@@ -72,7 +55,7 @@ async def process_jdt(input_file, output_file):
                 'Debit': row['Total Fee EUR'],
                 'Credit': '',
                 'DueDate': formatted_date,
-                'ShortName': DEBIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+                'ShortName': DEBIT_MAPPING_PAYD.get(row['Payment Method'], row['Payment Method']),
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': formatted_date
@@ -87,7 +70,7 @@ async def process_jdt(input_file, output_file):
                 'Debit': '',
                 'Credit': row['Total Fee EUR'],
                 'DueDate': formatted_date,
-                'ShortName': CREDIT_MAPPING.get(row['Payment Method'], row['Payment Method']),
+                'ShortName': CREDIT_MAPPING_PEYD.get(row['Payment Method'], row['Payment Method']),
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': formatted_date

@@ -1,8 +1,7 @@
 import pandas as pd
 import logging
 from datetime import datetime
-import os
-from config.mappings import SPECIAL_MAPPINGS, DEBIT_MAPPING_COMPLETED
+from config.mappings import DEBIT_MAPPING_COMPLETED
 
 async def format_date(date_str):
     """Форматирует дату в нужный формат, поддерживая разные форматы входных данных."""
@@ -50,7 +49,7 @@ async def process_jdt(input_file, output_file):
     df = pd.read_csv('temp/исходник (Completed).csv')
     
     # Читаем шаблон
-    template_df =  await pd.read_csv('templates/jdt_completed.csv', nrows=1)
+    template_df = pd.read_csv('templates/jdt_completed.csv', nrows=1)
     
     # Создаем списки для строк
     debit_rows = []
@@ -62,7 +61,7 @@ async def process_jdt(input_file, output_file):
     # Обрабатываем каждую транзакцию
     for index, row in df.iterrows():
         # Форматируем дату
-        formatted_date = format_date(row['Completed'])
+        formatted_date = await format_date(row['Completed'])
         
         # Дебетовая запись - используем Payment Provider
         debit_row = {
@@ -117,7 +116,7 @@ async def process_jdt(input_file, output_file):
     # Additional Fee
     for index, row in df.iterrows():
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
-            formatted_date = format_date(row['Completed'])
+            formatted_date = await format_date(row['Completed'])
             max_key += 1
             # Additional Fee дебет - используем DEBIT_MAPPING по значению из Payment Provider
             add_fee_debit = {
@@ -178,14 +177,14 @@ async def process_ojdt(input_file, output_file):
     df = pd.read_csv('temp/исходник (Completed).csv')
     
     # Читаем шаблон completed
-    template_df = await pd.read_csv('templates/ojdt_completed.csv', nrows=1)
+    template_df = pd.read_csv('templates/ojdt_completed.csv', nrows=1)
     
     # Создаем список для строк результата
     result_rows = []
     
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
-        formatted_date = format_date(row['Completed'])
+        formatted_date = await format_date(row['Completed'])
         
         # Основная запись
         ojdt_row = {

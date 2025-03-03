@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import asyncio
 from aiogram import F, Router, Bot
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
@@ -8,6 +7,7 @@ from aiogram.exceptions import TelegramNetworkError
 from processing.payd import process_jdt as process_payd_jdt, process_ojdt as process_payd_ojdt
 from processing.completed import process_jdt as process_completed_jdt, process_ojdt as process_completed_ojdt
 from bot.utils import clean_temp_directory
+from config.mappings import DEBIT_MAPPING_COMPLETED, DEBIT_MAPPING_PAYD, CREDIT_MAPPING_PEYD
 from config.settings import ADMIN_ID
 
 
@@ -51,36 +51,49 @@ async def format_command(message: Message):
     await message.reply(format_text, parse_mode='Markdown')
 
 @router.message(Command("info"))
-async def info_command(message: Message):
+async def info_command(message):
+    # Создаем строки для отображения мапингов PAYD
+    payd_debit_mappings = "\n".join([f"    - {k}: {v}" for k, v in DEBIT_MAPPING_PAYD.items()])
+    payd_credit_mappings = "\n".join([f"    - {k}: {v}" for k, v in CREDIT_MAPPING_PEYD.items()])
+    
+    # Создаем строки для отображения мапингов COMPLETED
+    completed_debit_mappings = "\n".join([f"    - {k}: {v}" for k, v in DEBIT_MAPPING_COMPLETED.items()])
+
     info_text = (
         "📊 <b>Структура проводок в SAP</b>\n\n"
         "<b>PAYD файл (простые платежи):</b>\n"
         "• Дебет = Кредит (Total Fee EUR)\n"
-        "• Счета дебета: 141xxx (поступление)\n"
-        "• Счета кредита: 210xxx (обязательства)\n\n"
-
+        "• Счета дебета:\n"
+        f"{payd_debit_mappings}\n"
+        "• Счета кредита:\n"
+        f"{payd_credit_mappings}\n\n"
+        
         "<b>COMPLETED файл (с комиссиями):</b>\n"
+        "• Счета дебета:\n"
+        f"{completed_debit_mappings}\n\n"
+        
         "1. Основная проводка:\n"
         "• Дебет: Total Fee EUR\n"
         "• Кредит1: Reseller Fee EUR (комиссия)\n"
         "• Кредит2: Net Fee EUR (чистая сумма)\n\n"
-
+        
         "<b>Специальные счета:</b>\n"
         "• 207001 - Reseller Fee\n"
         "• 420001 - Net Fee (wire_transfer)\n"
         "• 420002 - Net Fee (CC/APM)\n"
         "• 420003 - Additional Fee\n\n"
-
+        
         "<b>Пример COMPLETED:</b>\n"
         "Транзакция 100 EUR:\n"
         "• Дебет: 100 EUR (счет 210xxx)\n"
         "• Кредит1: 30 EUR (счет 207001) - комиссия\n"
         "• Кредит2: 70 EUR (счет 420xxx) - чистая сумма\n\n"
-
+        
         "При наличии Additional Fee создается отдельная проводка:\n"
         "• Дебет: сумма (счет по провайдеру)\n"
         "• Кредит: сумма (счет 420003)"
     )
+
     await message.reply(info_text, parse_mode='HTML')
 
 @router.message(F.document)
@@ -109,7 +122,8 @@ async def handle_file(message: Message, bot: Bot):
 
         # Формируем сообщение о процессе обработки
         report_type_msg = "COMPLETED" if report_type == 'completed' else "PAYD"
-        await message.reply(f"📥 Получен файл типа: {report_type_msg}\n⚙️ Обрабатываю...")
+        await message.answer(f"📥 Получен файл типа: {report_type_msg}\n⚙️ Обрабатываю...")
+        await message.answer(ADMIN_ID, f"📥 Получен файл типа: {report_type_msg}")
 
         # Переименовываем файл для обработки
         renamed_file = f"temp/исходник ({report_type_msg}).csv"
@@ -148,15 +162,16 @@ async def send_file_with_retry(message, file_path, filename, bot, max_retries=3)
     """Отправляет файл с повторными попытками при сетевых ошибках."""
     for attempt in range(max_retries):
         try:
-            # Используем FSInputFile правильно - передаем путь к файлу, а не открытый файл
-            await message.reply_document(FSInputFile(file_path, filename=filename))
+            # Используем FSInputFile правильно - передаем путь к файлу, а не открытый фа
+            await bot.send_document(message.chat.id, FSInputFile(file_path, filename=filename))
+            await bot.send_message(ADMIN_ID, 
+                        f"✅ Сформирован отчет для @{message.from_user.username}\n")
             return True  # Успешно отправлено
         except TelegramNetworkError as e:
             if attempt < max_retries - 1:
                 # Если это не последняя попытка, ждем и пробуем снова
                 retry_delay = 2 * (attempt + 1)  # Увеличиваем задержку с каждой попыткой
                 await message.answer(f"⚠️ Проблема с сетью, повторная попытка через {retry_delay} сек...")
-                await asyncio.sleep(retry_delay)
             else:
                 # Если все попытки исчерпаны, сообщаем об ошибке
                 await message.answer(f"❌ Не удалось отправить файл после {max_retries} попыток. Ошибка сети.")
@@ -167,14 +182,11 @@ async def send_file_with_retry(message, file_path, filename, bot, max_retries=3)
                         pass  # Игнорируем ошибки при отправке сообщения администратору
                 return False
         except Exception as e:
-            # Другие ошибки
-            await message.answer(f"❌ Ошибка при отправке файла: {type(e).__name__}")
-            if ADMIN_ID:
-                try:
-                    await bot.send_message(ADMIN_ID, f"❌ Ошибка при отправке файла {filename}: {type(e).__name__}: {str(e)}")
-                except:
-                    pass
-            return False
+            try:
+                await bot.send_message(ADMIN_ID, f"❌ Ошибка при отправке файла {filename}: {type(e).__name__}: {str(e)}")
+            except:
+                pass
+        return False
 
 async def determine_report_type(df):
     """Определяет тип отчета и проверяет валидность файла."""
