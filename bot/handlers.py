@@ -5,8 +5,8 @@ from aiogram import F, Router, Bot
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
 from aiogram.exceptions import TelegramNetworkError
-from payd import process_jdt as process_payd_jdt, process_ojdt as process_payd_ojdt
-from completed import process_jdt as process_completed_jdt, process_ojdt as process_completed_ojdt
+from processing.payd import process_jdt as process_payd_jdt, process_ojdt as process_payd_ojdt
+from processing.completed import process_jdt as process_completed_jdt, process_ojdt as process_completed_ojdt
 from bot.utils import clean_temp_directory
 from config.settings import ADMIN_ID
 
