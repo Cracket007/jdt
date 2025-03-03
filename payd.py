@@ -15,7 +15,8 @@ DEBIT_MAPPING = {
     'volt': '141005',
     'voltx': '141005',
     'wire_transfer': '141001',
-    'Unicorn': '141010'
+    'Unicorn': '141010',
+    'payretailers': '160006'
 }
 
 CREDIT_MAPPING = {
@@ -32,7 +33,8 @@ CREDIT_MAPPING = {
     'volt': '210005',
     'voltx': '210005',
     'wire_transfer': '210001',
-    'unicorn': '210010'
+    'unicorn': '210010',
+    'payretailers': '210014'
 }
 
 def format_date(date_str):
@@ -76,7 +78,7 @@ def process_jdt(output_file):
             'ParentKey': index + 1,
             'JdtNum': index + 1,
             'LineNum': '',
-            'Debit': row['Total Fee EUR'],
+            'Debit': row['Fval EUR'],
             'Credit': '',
             'DueDate': formatted_date,
             'ShortName': DEBIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
@@ -92,7 +94,7 @@ def process_jdt(output_file):
             'JdtNum': index + 1,
             'LineNum': '1',
             'Debit': '',
-            'Credit': row['Total Fee EUR'],
+            'Credit': row['Fval EUR'],
             'DueDate': formatted_date,
             'ShortName': CREDIT_MAPPING.get(row['Payment Provider'], row['Payment Provider']),
             'Reference1': row['Name'],

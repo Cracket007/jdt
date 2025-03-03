@@ -2,4 +2,4 @@ pyTelegramBotAPI
 pandas
 python-dotenv
 requests
-urllib3 
+urllib3
