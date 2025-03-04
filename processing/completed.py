@@ -45,8 +45,8 @@ async def process_jdt(input_file, output_file):
     4. Дебетовые записи Additional Fee
     5. Кредитовые записи Additional Fee
     """
-    # Читаем входной файл
-    df = pd.read_csv('temp/исходник (Completed).csv')
+    # Читаем входной файл с правильной кодировкой
+    df = pd.read_csv(input_file, encoding='utf-8-sig')
     
     # Читаем шаблон
     template_df = pd.read_csv('templates/jdt_completed.csv', nrows=1)
@@ -171,11 +171,11 @@ async def process_jdt(input_file, output_file):
 
 async def process_ojdt(input_file, output_file):
     """Обработка OJDT для completed отчета"""
-    ojdt_rows = []  # Исправлено с ojdt_row -[] на ojdt_rows = []
-    additional_fee_debit_rows = []  # Дебет Additional Fee
+    ojdt_rows = []
+    additional_fee_debit_rows = []
 
-    # Читаем исходный файл
-    df = pd.read_csv('temp/исходник (Completed).csv')
+    # Читаем исходный файл с правильной кодировкой
+    df = pd.read_csv(input_file, encoding='utf-8-sig')
     
     # Читаем шаблон completed
     template_df = pd.read_csv('templates/ojdt_completed.csv', nrows=1)
