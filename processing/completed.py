@@ -182,11 +182,10 @@ async def process_ojdt(input_file, output_file):
     
     # Создаем список для строк результата
     result_rows = []
-    max_key = len(df)
+    new_index = 0
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
         formatted_date = await format_date(row['Completed'])
-        max_key += 1
         # Основная запись
         ojdt_row = {
             'JdtNum': index + 1,
@@ -198,21 +197,19 @@ async def process_ojdt(input_file, output_file):
         }
         ojdt_rows.append(ojdt_row)  # Добавляем в список ojdt_rows
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
+            new_index +=1
             add_fee_debit = {
-                'ParentKey': max_key,
-                'JdtNum': max_key,
-                'LineNum': '',
-                'Debit': row['Additionall Fee'],
-                'Credit': '',
-                'DueDate': formatted_date,
-                'ShortName': DEBIT_MAPPING_COMPLETED.get(row['Payment Provider'], row['Payment Provider']),
-                'Reference1': row['Name'],
+                'JdtNum': new_index,
+                'ReferenceDate': formatted_date,
+                'Reference': row['Name'],
                 'Reference2': row['Order'],
-                'TaxDate': formatted_date
+                'TaxDate': formatted_date,
+                'DueDate': formatted_date
             }
             additional_fee_debit_rows.append(add_fee_debit)
     
-    result_rows = ojdt_rows + additional_fee_debit_rows  # Исправлено с ojdt_row на ojdt_rows
+    result_rows = ojdt_rows + additional_fee_debit_rows  
+    print("создан ojdt completed")
     
     # Создаем DataFrame с данными
     data_df = pd.DataFrame(result_rows, columns=template_df.columns)

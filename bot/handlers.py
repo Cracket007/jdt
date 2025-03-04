@@ -122,8 +122,8 @@ async def handle_file(message: Message, bot: Bot):
 
         # Формируем сообщение о процессе обработки
         report_type_msg = "COMPLETED" if report_type == 'completed' else "PAYD"
-        await message.answer(f"📥 Получен файл типа: {report_type_msg}\n⚙️ Обрабатываю...")
-        await bot.send_message(ADMIN_ID, f"📥 Получен файл типа: {report_type_msg}")
+        bot_message = await message.answer(f"📥 Получен файл типа: {report_type_msg}\n⚙️ Обрабатываю...")
+        bot_message_for_admin = await bot.send_message(ADMIN_ID, f"📥 Получен файл типа: {report_type_msg}")
 
         # Переименовываем файл для обработки
         renamed_file = f"temp/исходник ({report_type_msg}).csv"
@@ -141,15 +141,16 @@ async def handle_file(message: Message, bot: Bot):
             await process_payd_ojdt(renamed_file, output_ojdt)
 
         # Отправляем файлы пользователю с повторными попытками
+        # Редактируем предыдущее сообщение о процессе обработки
+        await bot_message.edit_text(f"{report_type_msg}\n✅ Успешно обработан")
         await send_file_with_retry(message, output_jdt, "jdt.csv", bot)
         await send_file_with_retry(message, output_ojdt, "ojdt.csv", bot)
+        await bot_message_for_admin.edit_text(f"{report_type_msg}\n✅ Успешно обработан\n\nДля: @{message.from_user.username or 'Неизвестный пользователь'}")
 
     except Exception as e:
         error_type = type(e).__name__
         error_msg = str(e)
         await message.reply(f"❌ Ошибка при обработке файла: \nтип и сообщение об ошибке отправлен разработчику")
-
-        # Отправляем уведомление администратору, если определен ADMIN_ID
         if ADMIN_ID:
             try:
                 await bot.send_message(ADMIN_ID, f"❌ Ошибка при обработке файла: {error_type}: {error_msg}")
@@ -164,8 +165,6 @@ async def send_file_with_retry(message, file_path, filename, bot, max_retries=3)
         try:
             # Используем FSInputFile правильно - передаем путь к файлу, а не открытый фа
             await bot.send_document(message.chat.id, FSInputFile(file_path, filename=filename))
-            await bot.send_message(ADMIN_ID, 
-                        f"✅ Сформирован отчет для @{message.from_user.username}\n")
             return True  # Успешно отправлено
         except TelegramNetworkError as e:
             if attempt < max_retries - 1:
