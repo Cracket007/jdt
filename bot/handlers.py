@@ -123,7 +123,7 @@ async def handle_file(message: Message, bot: Bot):
         # Формируем сообщение о процессе обработки
         report_type_msg = "COMPLETED" if report_type == 'completed' else "PAYD"
         await message.answer(f"📥 Получен файл типа: {report_type_msg}\n⚙️ Обрабатываю...")
-        await message.answer(ADMIN_ID, f"📥 Получен файл типа: {report_type_msg}")
+        await bot.send_message(ADMIN_ID, f"📥 Получен файл типа: {report_type_msg}")
 
         # Переименовываем файл для обработки
         renamed_file = f"temp/исходник ({report_type_msg}).csv"
