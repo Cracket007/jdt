@@ -20,7 +20,8 @@ DEBIT_MAPPING_PAYD = {
     'volt': '141005',
     'voltx': '141005',
     'wire_transfer': '141001',
-    'Unicorn': '141010'
+    'Unicorn': '141010',
+    'payretailers': '160006'
 }
 
 CREDIT_MAPPING_PEYD = {
@@ -37,7 +38,8 @@ CREDIT_MAPPING_PEYD = {
     'volt': '210005',
     'voltx': '210005',
     'wire_transfer': '210001',
-    'unicorn': '210010'
+    'unicorn': '210010',
+    'payretailers': '210014'
 }
 
 DEBIT_MAPPING_COMPLETED = {
@@ -54,5 +56,6 @@ DEBIT_MAPPING_COMPLETED = {
     'volt': '210005',
     'voltx': '210005',
     'wire_transfer': '210001',
-    'Unicorn': '210010'
+    'Unicorn': '210010',
+    'payretailers': '210014'
 }

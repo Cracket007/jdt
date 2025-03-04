@@ -13,6 +13,11 @@ async def format_date(date_str):
             '%m/%d/%Y %H:%M:%S',  # 01/31/2025 22:22:24
             '%d.%m.%Y %H:%M:%S',  # 31.01.2025 22:22:24
             '%Y/%m/%d %H:%M:%S',  # 2025/01/31 22:22:24
+            '%Y-%m-%d',           # 2025-01-31
+            '%d/%m/%Y',           # 31/01/2025
+            '%m/%d/%Y',           # 01/31/2025
+            '%d.%m.%Y',           # 31.01.2025
+            '%Y/%m/%d',           # 2025/01/31
         ]
 
         for date_format in formats:
@@ -72,6 +77,7 @@ async def process_jdt(input_file, output_file):
             'Credit': '',
             'DueDate': formatted_date,
             'ShortName': DEBIT_MAPPING_COMPLETED.get(row['Payment Provider'], row['Payment Provider']),
+            'ReferenceDate1': formatted_date,
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': formatted_date
@@ -87,6 +93,7 @@ async def process_jdt(input_file, output_file):
             'Credit': row['Reseller\nFee EUR'],
             'DueDate': formatted_date,
             'ShortName': '207001',
+            'ReferenceDate1': formatted_date,
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': formatted_date
@@ -104,6 +111,7 @@ async def process_jdt(input_file, output_file):
             'Credit': row['Net\nFee EUR'],
             'DueDate': formatted_date,
             'ShortName': short_name,  # Используем определенное значение
+            'ReferenceDate1': formatted_date,
             'Reference1': row['Name'],
             'Reference2': row['Order'],
             'TaxDate': formatted_date
@@ -127,6 +135,7 @@ async def process_jdt(input_file, output_file):
                 'Credit': '',
                 'DueDate': formatted_date,
                 'ShortName': DEBIT_MAPPING_COMPLETED.get(row['Payment Provider'], row['Payment Provider']),
+                'ReferenceDate1': formatted_date,
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': formatted_date
@@ -142,6 +151,7 @@ async def process_jdt(input_file, output_file):
                 'Credit': row['Additionall Fee'],
                 'DueDate': formatted_date,
                 'ShortName': '420003',  # Фиксированное значение для Additional Fee кредит
+                'ReferenceDate1': formatted_date,
                 'Reference1': row['Name'],
                 'Reference2': row['Order'],
                 'TaxDate': formatted_date
@@ -171,6 +181,7 @@ async def process_jdt(input_file, output_file):
 
 async def process_ojdt(input_file, output_file):
     """Обработка OJDT для completed отчета"""
+   
     ojdt_rows = []
     additional_fee_debit_rows = []
 
@@ -179,10 +190,9 @@ async def process_ojdt(input_file, output_file):
     
     # Читаем шаблон completed
     template_df = pd.read_csv('templates/ojdt_completed.csv', nrows=1)
-    
+    max_key = len(df)
     # Создаем список для строк результата
     result_rows = []
-    new_index = 0
     # Проходим по всем строкам исходного файла
     for index, row in df.iterrows():
         formatted_date = await format_date(row['Completed'])
@@ -197,9 +207,9 @@ async def process_ojdt(input_file, output_file):
         }
         ojdt_rows.append(ojdt_row)  # Добавляем в список ojdt_rows
         if pd.notna(row.get('Additionall Fee', 0)) and float(row['Additionall Fee']) != 0:
-            new_index +=1
+            max_key += 1
             add_fee_debit = {
-                'JdtNum': new_index,
+                'JdtNum': max_key,
                 'ReferenceDate': formatted_date,
                 'Reference': row['Name'],
                 'Reference2': row['Order'],
