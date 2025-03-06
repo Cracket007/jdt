@@ -1,0 +1,7 @@
+ParentKey,LineNum,Line_ID,AccountCode,Debit,Credit,FCDebit,FCCredit,FCCurrency,DueDate,ShortName,ContraAccount,LineMemo,ReferenceDate1,ReferenceDate2,Reference1,Reference2,ProjectCode,CostingCode,TaxDate,BaseSum,TaxGroup,DebitSys,CreditSys,VatDate,VatLine,SystemBaseAmount,VatAmount,SystemVatAmount,GrossValue,AdditionalReference,CostingCode2,CostingCode3,CostingCode4,TaxCode,TaxPostAccount,CostingCode5,LocationCode,ControlAccount,WTLiable,WTRow,PaymentBlock,BlockReason,FederalTaxID,BPLID,ExposedTransNumber,CostElementCode,Cig,Cup,U_Cryptodoc,U_TurnC2B,U_CryptoCurr,U_CryptoAm,U_CryptoEur
+JdtNum,LineNum,Line_ID,Account,Debit,Credit,FCDebit,FCCredit,FCCurrency,DueDate,ShortName,ContraAct,LineMemo,RefDate,Ref2Date,Ref1,Ref2,Project,ProfitCode,TaxDate,BaseSum,VatGroup,SYSDeb,SYSCred,VatDate,VatLine,SYSBaseSum,VatAmount,SYSVatSum,GrossValue,Ref3Line,OcrCode2,OcrCode3,OcrCode4,TaxCode,TaxPostAcc,OcrCode5,Location,Account,WTLiable,WTLine,PayBlock,PayBlckRef,LicTradNum,BPLId,ExTransId,DocArr,DocLine,CemCode,CIG,CUP,U_Cryptodoc,U_TurnC2B,U_CryptoCurr
+1,,,,Total Fee EUR (AJ),,,,,Completed (AE),Payment Provider (S),,,(J) DueDate,,Name (D),Order (A),,,(J) DueDate,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+1,1,,,,Reseller Fee EUR (AW),,,,,справочник,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+1,2,,,,Net Fee EUR (AX),,,,,Payment Method (K) справочник,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2,,,,Additionall Fee (AS),,,,,,Payment Provider (S),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2,1,,,,Additionall Fee (AS),,,,,справочник,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
