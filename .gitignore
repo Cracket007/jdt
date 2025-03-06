@@ -1,23 +1,20 @@
-<<<<<<< HEAD
 # Виртуальное окружение
 venv/
 env/
 .env
+
 # Переменные окружения
 .env
 
 # Python
-=======
-# Byte-compiled / optimized / DLL files
->>>>>>> 04312fea3661bf0406c40f16b491ead8c9c691f1
 __pycache__/
 *.py[cod]
 *$py.class
 
-<<<<<<< HEAD
 # Временные файлы
-temp/* 
-=======
+temp/*
+
+# Byte-compiled / optimized / DLL files
 # C extensions
 *.so
 
@@ -184,4 +181,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+<<<<<<< HEAD
 >>>>>>> 04312fea3661bf0406c40f16b491ead8c9c691f1
+=======
+>>>>>>> e67576488fddb9da53ac8983f20f3a8614cda63e
